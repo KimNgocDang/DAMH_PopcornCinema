@@ -5,6 +5,8 @@
   "scripts": {
     "testdb": "ts-node test-db.ts",
     "seed": "ts-node seed.ts",
+    "db:generate": "ts-node seed.ts",
+    "db:reset": "ts-node seed.ts",
     "dev": "nodemon --watch . --ext ts --exec ts-node --project tsconfig.json app.ts",
     "start": "node dist/app.js"
   },

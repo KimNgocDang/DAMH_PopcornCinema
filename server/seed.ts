@@ -6,6 +6,13 @@ import { Auditorium } from "./schemas/auditorium.schema";
 import { Seat } from "./schemas/seat.schema";
 import { Showtime } from "./schemas/showtime.schema";
 import { User } from "./schemas/user.schema";
+import { Actor } from "./schemas/actor.schema";
+import { Genre } from "./schemas/genre.schema";
+import { Combo } from "./schemas/combo.schema";
+import { MovieActor } from "./schemas/movie-actor.schema";
+import { MovieGenre } from "./schemas/movie-genre.schema";
+import { BookingCombo } from "./schemas/booking-combo.schema";
+import { PaymentTransaction } from "./schemas/payment-transaction.schema";
 
 dotenv.config();
 
@@ -20,6 +27,13 @@ const seedData = async () => {
     await Seat.deleteMany({});
     await Showtime.deleteMany({});
     await User.deleteMany({});
+    await Actor.deleteMany({});
+    await Genre.deleteMany({});
+    await Combo.deleteMany({});
+    await MovieActor.deleteMany({});
+    await MovieGenre.deleteMany({});
+    await BookingCombo.deleteMany({});
+    await PaymentTransaction.deleteMany({});
 
     console.log("Cleared existing data...");
 
