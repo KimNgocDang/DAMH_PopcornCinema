@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../../styles/LoginPage.css";
 import logo from "../../assets/images/logo/logo.png";
+import { register } from "../../utils/auth";
 
 type RegisterForm = {
   fullName: string;
@@ -21,36 +22,46 @@ export default function RegisterPage() {
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
     // validate
     if (!form.fullName || !form.email || !form.password || !form.confirmPassword) {
       setError("❌ Vui lòng nhập đầy đủ thông tin");
+      setLoading(false);
       return;
     }
 
     if (form.password.length < 6) {
       setError("❌ Mật khẩu phải ≥ 6 ký tự");
+      setLoading(false);
       return;
     }
 
     if (form.password !== form.confirmPassword) {
       setError("❌ Mật khẩu không khớp");
+      setLoading(false);
       return;
     }
 
-    console.log("Register data:", form);
+    try {
+      const newUser = await register(form.fullName, form.email, form.password);
 
-    // TODO: gọi API
-
-    alert("🎉 Đăng ký thành công!");
-    navigate("/auth/login");
+      setLoading(false);
+      alert("🎉 Đăng ký thành công! Vui lòng đăng nhập");
+      navigate("/auth/login");
+    } catch (err: any) {
+      setError(err.message || "❌ Đăng ký thất bại. Vui lòng thử lại");
+      setLoading(false);
+    }
   };
 
   return (
@@ -90,6 +101,7 @@ export default function RegisterPage() {
                   placeholder="Nhập họ và tên..."
                   value={form.fullName}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
@@ -101,6 +113,7 @@ export default function RegisterPage() {
                   placeholder="Nhập email..."
                   value={form.email}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
@@ -112,6 +125,7 @@ export default function RegisterPage() {
                   placeholder="Nhập mật khẩu..."
                   value={form.password}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
@@ -123,13 +137,14 @@ export default function RegisterPage() {
                   placeholder="Nhập lại mật khẩu..."
                   value={form.confirmPassword}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
               {error && <p className="login-error">{error}</p>}
 
-              <button type="submit" className="login-btn">
-                Đăng ký
+              <button type="submit" className="login-btn" disabled={loading}>
+                {loading ? "Đang đăng ký..." : "Đăng ký"}
               </button>
 
               <p className="login-footer">

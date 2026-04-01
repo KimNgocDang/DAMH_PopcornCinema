@@ -2,7 +2,7 @@ import { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "../../styles/LoginPage.css";
 import logo from "../../assets/images/logo/logo.png";
-import { users } from "../../data/users";
+import { login } from "../../utils/auth";
 
 type LoginForm = {
   email: string;
@@ -18,34 +18,35 @@ export default function LoginPage() {
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
     if (!form.email || !form.password) {
       setError("❌ Vui lòng nhập đầy đủ thông tin");
+      setLoading(false);
       return;
     }
 
-    const user = users.find(
-      (u) => u.email === form.email && u.password === form.password
-    );
+    try {
+      const user = await login(form.email, form.password);
 
-    if (!user) {
-      setError("❌ Sai email hoặc mật khẩu");
-      return;
-    }
-
-    localStorage.setItem("currentUser", JSON.stringify(user));
-
-    if (user.role === "ADMIN") {
-      navigate("/admin/dashboard");
-    } else {
-      navigate("/");
+      setLoading(false);
+      if (user.role === "ADMIN") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
+    } catch (err: any) {
+      setError(err.message || "❌ Đăng nhập thất bại. Vui lòng thử lại");
+      setLoading(false);
     }
   };
 
@@ -86,6 +87,7 @@ export default function LoginPage() {
                   placeholder="Nhập email..."
                   value={form.email}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
@@ -97,6 +99,7 @@ export default function LoginPage() {
                   placeholder="Nhập mật khẩu..."
                   value={form.password}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
@@ -109,7 +112,9 @@ export default function LoginPage() {
 
               {error && <p className="login-error">{error}</p>}
 
-              <button className="login-btn">Đăng nhập</button>
+              <button type="submit" className="login-btn" disabled={loading}>
+                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+              </button>
 
               {/* 🔗 REGISTER */}
               <p className="login-footer">

@@ -17,6 +17,8 @@ const movieSchema = new Schema(
     },
     actors: [{ type: String }],
     genres: [{ type: String }],
+    trailerUrl: { type: String, default: "" },
+    subtitle: { type: String, default: "" },
   },
   { timestamps: true }
 );

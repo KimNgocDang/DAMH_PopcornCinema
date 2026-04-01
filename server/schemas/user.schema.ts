@@ -4,7 +4,7 @@ const userSchema = new Schema(
   {
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String, required: true, select: false },  // Optional in query, not required to return
     role: {
       type: String,
       enum: ["CUSTOMER", "ADMIN"],
