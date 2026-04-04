@@ -1,7 +1,6 @@
 import { SeatHold } from "../schemas/seat-hold.schema";
 import { Seat } from "../schemas/seat.schema";
 import { Showtime } from "../schemas/showtime.schema";
-import moment from "moment";
 
 // Giữ ghế trong vòng 5 phút
 export const holdSeat = async (showtimeId: string, seatId: string, userId: string) => {
@@ -13,7 +12,7 @@ export const holdSeat = async (showtimeId: string, seatId: string, userId: strin
   if (!showtime) throw new Error("Showtime not found");
 
   // Tạo thời gian hết hạn giữ ghế (5 phút)
-  const expiresAt = moment().add(5, "minutes").toDate();
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
   // Lưu ghế đã giữ
   const seatHold = new SeatHold({

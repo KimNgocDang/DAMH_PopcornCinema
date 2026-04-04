@@ -5,15 +5,41 @@ import { useEffect, useRef, useState } from "react";
 
 export default function Header() {
   const navigate = useNavigate();
-
-  const storedUser = localStorage.getItem("currentUser");
-  const user = storedUser ? JSON.parse(storedUser) : null;
-
+  const [user, setUser] = useState<any>(null);
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Check localStorage cho user
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+    
+    if (storedUser && storedToken) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      setUser(null);
+    }
+
+    // Listen for storage changes (login/logout from other tabs)
+    const handleStorageChange = () => {
+      const updatedUser = localStorage.getItem("user");
+      const updatedToken = localStorage.getItem("token");
+      
+      if (updatedUser && updatedToken) {
+        setUser(JSON.parse(updatedUser));
+      } else {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   const handleLogout = () => {
-    localStorage.removeItem("currentUser");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
     navigate("/");
   };
 

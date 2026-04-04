@@ -1,4 +1,6 @@
 import dotenv from "dotenv";
+import path from "path";
+import bcrypt from "bcryptjs";
 import { connectDB } from "./config/db"; // Import db connection
 import { Cinema } from "./schemas/cinema.schema";
 import { Movie } from "./schemas/movie.schema";
@@ -14,7 +16,8 @@ import { MovieGenre } from "./schemas/movie-genre.schema";
 import { BookingCombo } from "./schemas/booking-combo.schema";
 import { PaymentTransaction } from "./schemas/payment-transaction.schema";
 
-dotenv.config();
+// Load .env from root folder
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const seedData = async () => {
   try {
@@ -214,39 +217,42 @@ const seedData = async () => {
     await Showtime.insertMany(showtimes);
     console.log(`${showtimes.length} showtimes seeded`);
 
-    // Seed Users
+    // ✅ Seed Users with proper bcrypt hashes
+    const testPassword = "password123";
+    const hashedPassword = await bcrypt.hash(testPassword, 10);
+
     const users = await User.insertMany([
       {
         fullName: "Nguyễn Văn A",
         email: "customer1@example.com",
-        passwordHash: "$2a$12$abc123...", // This should be a real hash
+        passwordHash: hashedPassword,
         role: "CUSTOMER",
         status: "ACTIVE",
       },
       {
         fullName: "Trần Thị B",
         email: "customer2@example.com",
-        passwordHash: "$2a$12$def456...",
+        passwordHash: hashedPassword,
         role: "CUSTOMER",
         status: "ACTIVE",
       },
       {
         fullName: "Lê Văn C",
         email: "customer3@example.com",
-        passwordHash: "$2a$12$ghi789...",
+        passwordHash: hashedPassword,
         role: "CUSTOMER",
         status: "ACTIVE",
       },
       {
         fullName: "Admin User",
         email: "admin@popcorncinema.com",
-        passwordHash: "$2a$12$xyz789...",
+        passwordHash: hashedPassword,
         role: "ADMIN",
         status: "ACTIVE",
       },
     ]);
 
-    console.log(`${users.length} users seeded`);
+    console.log(`${users.length} users seeded (password: ${testPassword})`);
 
     console.log("\n✅ Data seeding completed successfully!");
     console.log(`Summary:`);

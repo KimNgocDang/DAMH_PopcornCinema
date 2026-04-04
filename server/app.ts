@@ -1,30 +1,32 @@
 import express from "express";
+import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import { connectDB } from "./config/db";
-import authRoute from "./routes/auth.route";
-import movieRoute from "./routes/movie.route";
-import cinemaRoute from "./routes/cinema.route";
-import auditoriumRoute from "./routes/auditorium.route";
-import seatRoute from "./routes/seat.route";
-import showtimeRoute from "./routes/showtime.route";
-import seatHoldRoute from "./routes/seat-hold.route";
-import bookingRoute from "./routes/booking.route";
+import apiRoutes from "./routes/index";
+import { errorHandler } from "./middlewares/error.middleware";
 
-dotenv.config();
+// Load .env from root folder
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// CORS Configuration
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
 app.use(express.json());
 
-app.use("/api/auth", authRoute);
-app.use("/api/movies", movieRoute);
-app.use("/api/cinemas", cinemaRoute);
-app.use("/api/auditoriums", auditoriumRoute);
-app.use("/api/seats", seatRoute);
-app.use("/api/showtimes", showtimeRoute);
-app.use("/api/seat-holds", seatHoldRoute);
-app.use("/api/bookings", bookingRoute);
+// Use all API routes
+app.use("/api", apiRoutes);
+
+// Error handler middleware
+app.use(errorHandler);
 
 const startServer = async () => {
   await connectDB();
