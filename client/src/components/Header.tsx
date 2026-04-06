@@ -2,16 +2,18 @@ import "../styles/layout.css";
 import logo from "../assets/images/logo/logo.png";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import { getCurrentUser, logout, isAuthenticated, type CurrentUser } from "../utils/auth";
 
 export default function Header() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<CurrentUser | null>(getCurrentUser());
+  const [authed, setAuthed] = useState(isAuthenticated());
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Check localStorage cho user
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("currentUser");
     const storedToken = localStorage.getItem("token");
     
     if (storedUser && storedToken) {
@@ -22,7 +24,7 @@ export default function Header() {
 
     // Listen for storage changes (login/logout from other tabs)
     const handleStorageChange = () => {
-      const updatedUser = localStorage.getItem("user");
+      const updatedUser = localStorage.getItem("currentUser");
       const updatedToken = localStorage.getItem("token");
       
       if (updatedUser && updatedToken) {
@@ -37,13 +39,24 @@ export default function Header() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
+    logout();
+    setOpen(false);
     navigate("/");
   };
 
-  // đóng dropdown khi click ngoài
+  useEffect(() => {
+    const syncAuthState = () => {
+      setUser(getCurrentUser());
+      setAuthed(isAuthenticated());
+    };
+
+    window.addEventListener("auth-changed", syncAuthState);
+
+    return () => {
+      window.removeEventListener("auth-changed", syncAuthState);
+    };
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -61,29 +74,30 @@ export default function Header() {
   return (
     <header className="navbar">
       <div className="container nav-wrapper">
-        {/* LOGO */}
         <div className="logo">
           <Link to="/">
             <img src={logo} alt="Popcorn Cinema" />
           </Link>
         </div>
 
-        {/* MENU */}
         <nav className="nav-menu">
           <Link to="/">Trang chủ</Link>
           <Link to="/movies">Phim</Link>
-          <Link to="/showtimes">Lịch chiếu</Link>
           <Link to="/promotions">Khuyến mãi</Link>
         </nav>
 
-        {/* ACTIONS */}
         <div className="nav-actions">
-          {user ? (
+          {authed && user ? (
             <div className="nav-user" ref={dropdownRef}>
               <button
                 className="nav-user-trigger"
                 onClick={() => setOpen(!open)}
               >
+                <img
+                  src={user.avatar || "https://via.placeholder.com/32?text=U"}
+                  alt="avatar"
+                  className="nav-user-avatar"
+                />
                 Xin chào, {user.fullName}
               </button>
 
@@ -91,6 +105,9 @@ export default function Header() {
                 <div className="nav-user-dropdown">
                   <Link to="/profile" onClick={() => setOpen(false)}>
                     Thông tin cá nhân
+                  </Link>
+                  <Link to="/booking-history" onClick={() => setOpen(false)}>
+                    Lịch sử giao dịch
                   </Link>
 
                   {user.role === "ADMIN" && (
@@ -102,10 +119,7 @@ export default function Header() {
                     </Link>
                   )}
 
-                  <button
-                    className="nav-logout-btn"
-                    onClick={handleLogout}
-                  >
+                  <button className="nav-logout-btn" onClick={handleLogout}>
                     Đăng xuất
                   </button>
                 </div>

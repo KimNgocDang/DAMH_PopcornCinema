@@ -1,6 +1,25 @@
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, Document, model } from "mongoose";
 
-const promotionSchema = new Schema(
+export interface IPromotion {
+  code: string;
+  title: string;
+  description?: string;
+  discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+  discountValue: number;
+  maxDiscount?: number | null;
+  minOrderValue?: number;
+  usageLimit?: number | null;
+  usedCount?: number;
+  applicableTo?: "ALL" | "TICKETS" | "SNACKS" | "BOTH";
+  startDate: Date;
+  endDate: Date;
+  status?: "ACTIVE" | "INACTIVE" | "EXPIRED";
+  imageUrl?: string;
+}
+
+export interface IPromotionDocument extends IPromotion, Document {}
+
+const promotionSchema = new Schema<IPromotionDocument>(
   {
     code: {
       type: String,
@@ -86,7 +105,8 @@ const promotionSchema = new Schema(
   { timestamps: true }
 );
 
-promotionSchema.index({ code: 1 });
 promotionSchema.index({ startDate: 1, endDate: 1 });
 
-export const Promotion = model("Promotion", promotionSchema);
+export const Promotion =
+  mongoose.models.Promotion ||
+  model<IPromotionDocument>("Promotion", promotionSchema);

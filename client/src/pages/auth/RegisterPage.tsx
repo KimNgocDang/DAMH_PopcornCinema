@@ -2,7 +2,8 @@ import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../../styles/LoginPage.css";
 import logo from "../../assets/images/logo/logo.png";
-import { register } from "../../utils/auth";
+import { registerApi } from "../../services/auth.api";
+import { saveAuth } from "../../utils/auth";
 
 type RegisterForm = {
   fullName: string;
@@ -31,35 +32,47 @@ export default function RegisterPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
-    // validate
     if (!form.fullName || !form.email || !form.password || !form.confirmPassword) {
       setError("❌ Vui lòng nhập đầy đủ thông tin");
-      setLoading(false);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError("❌ Email không hợp lệ");
       return;
     }
 
     if (form.password.length < 6) {
       setError("❌ Mật khẩu phải ≥ 6 ký tự");
-      setLoading(false);
       return;
     }
 
     if (form.password !== form.confirmPassword) {
       setError("❌ Mật khẩu không khớp");
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
     try {
-      const newUser = await register(form.fullName, form.email, form.password);
 
-      setLoading(false);
-      alert("🎉 Đăng ký thành công! Vui lòng đăng nhập");
-      navigate("/auth/login");
+      const data = await registerApi(form.fullName, form.email, form.password);
+
+      saveAuth(data.token, {
+        _id: data.user._id,
+        fullName: data.user.fullName,
+        email: data.user.email,
+        phone: data.user.phone,
+        avatar: data.user.avatar,
+        role: data.user.role,
+        status: data.user.status,
+      });
+
+      navigate("/");
     } catch (err: any) {
-      setError(err.message || "❌ Đăng ký thất bại. Vui lòng thử lại");
+      setError(err.message || "❌ Đăng ký thất bại");
+    } finally {
       setLoading(false);
     }
   };
@@ -67,8 +80,6 @@ export default function RegisterPage() {
   return (
     <div className="login-page">
       <div className="login-container">
-
-        {/* LEFT */}
         <div className="login-left">
           <div className="login-overlay"></div>
 
@@ -84,15 +95,12 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* RIGHT */}
         <div className="login-right">
           <div className="login-card">
-
             <h2>Đăng ký</h2>
             <p className="login-sub">Tạo tài khoản mới 🚀</p>
 
             <form onSubmit={handleSubmit} className="login-form">
-
               <div className="input-group">
                 <label>Họ và tên</label>
                 <input
@@ -148,17 +156,11 @@ export default function RegisterPage() {
               </button>
 
               <p className="login-footer">
-                Đã có tài khoản?{" "}
-                <Link to="/auth/login">
-                  Đăng nhập
-                </Link>
+                Đã có tài khoản? <Link to="/auth/login">Đăng nhập</Link>
               </p>
-
             </form>
-
           </div>
         </div>
-
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authenticate, authorize } from "../middlewares/auth.middleware";
 import {
   getAllSnacks,
   getSnackById,
@@ -13,6 +14,8 @@ import {
 
 const router = Router();
 
+// ─── Public routes ────────────────────────────────────────────────────────────
+
 // Get all snacks
 router.get("/", async (_req, res) => {
   try {
@@ -24,7 +27,8 @@ router.get("/", async (_req, res) => {
   }
 });
 
-// Get active snacks
+// Get active snacks only
+// NOTE: must be registered before /:id
 router.get("/active", async (_req, res) => {
   try {
     const snacks = await getActiveSnacks();
@@ -36,6 +40,7 @@ router.get("/active", async (_req, res) => {
 });
 
 // Get snacks by category
+// NOTE: must be registered before /:id
 router.get("/category/:category", async (req, res) => {
   try {
     const snacks = await getSnacksByCategory(req.params.category);
@@ -57,8 +62,10 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Create snack
-router.post("/", async (req, res) => {
+// ─── Admin routes ─────────────────────────────────────────────────────────────
+
+// Create a snack
+router.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
     const snack = await createSnack(req.body);
     res.status(201).json(snack);
@@ -68,10 +75,10 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Update snack
-router.put("/:id", async (req, res) => {
+// Update a snack
+router.put("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
-    const snack = await updateSnack(req.params.id, req.body);
+    const snack = await updateSnack(String(req.params.id), req.body);
     res.status(200).json(snack);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -79,11 +86,11 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// Update snack quantity
-router.patch("/:id/quantity", async (req, res) => {
+// Update snack quantity (e.g. inventory adjustment)
+router.patch("/:id/quantity", authenticate, authorize("ADMIN"), async (req, res) => {
   const { quantity } = req.body;
   try {
-    const snack = await updateSnackQuantity(req.params.id, quantity);
+    const snack = await updateSnackQuantity(String(req.params.id), quantity);
     res.status(200).json(snack);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -91,11 +98,11 @@ router.patch("/:id/quantity", async (req, res) => {
   }
 });
 
-// Update snack status
-router.patch("/:id/status", async (req, res) => {
+// Toggle snack active/inactive status
+router.patch("/:id/status", authenticate, authorize("ADMIN"), async (req, res) => {
   const { status } = req.body;
   try {
-    const snack = await updateSnackStatus(req.params.id, status);
+    const snack = await updateSnackStatus(String(req.params.id), status);
     res.status(200).json(snack);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -103,10 +110,10 @@ router.patch("/:id/status", async (req, res) => {
   }
 });
 
-// Delete snack
-router.delete("/:id", async (req, res) => {
+// Delete a snack
+router.delete("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
-    await deleteSnack(req.params.id);
+    await deleteSnack(String(req.params.id));
     res.status(200).json({ message: "Snack deleted successfully" });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

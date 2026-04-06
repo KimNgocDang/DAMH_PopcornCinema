@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authenticate, authorize } from "../middlewares/auth.middleware";
 import {
   getSavedPromotionsByUser,
   isSaved,
@@ -10,10 +11,57 @@ import {
 
 const router = Router();
 
-// Get saved promotions by user
-router.get("/user/:userId", async (req, res) => {
+// ─── Admin routes ─────────────────────────────────────────────────────────────
+
+// Get saved promotions for any user by ID (admin)
+router.get(
+  "/admin/user/:userId",
+  authorize("ADMIN"),
+  async (req, res) => {
+    try {
+      const savedPromotions = await getSavedPromotionsByUser(String(req.params.userId));
+      res.status(200).json(savedPromotions);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      res.status(500).json({ message });
+    }
+  }
+);
+
+// Get saved promotion count for any user (admin)
+router.get(
+  "/admin/user/:userId/count",
+  authorize("ADMIN"),
+  async (req, res) => {
+    try {
+      const count = await getSavedPromotionCount(String(req.params.userId));
+      res.status(200).json({ count });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      res.status(500).json({ message });
+    }
+  }
+);
+
+// Remove a saved-promotion record by its own ID (admin)
+router.delete("/admin/:id", authorize("ADMIN"), async (req, res) => {
   try {
-    const savedPromotions = await getSavedPromotionsByUser(req.params.userId);
+    await removeSavedPromotion(String(req.params.id));
+    res.status(200).json({ message: "Saved promotion deleted successfully" });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(404).json({ message });
+  }
+});
+
+// ─── User routes (all require authentication) ─────────────────────────────────
+
+router.use(authenticate);
+
+// Get saved promotions for the authenticated user
+router.get("/me", async (req, res) => {
+  try {
+    const savedPromotions = await getSavedPromotionsByUser(req.auth!.userId);
     res.status(200).json(savedPromotions);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -21,10 +69,10 @@ router.get("/user/:userId", async (req, res) => {
   }
 });
 
-// Get saved promotions count
-router.get("/user/:userId/count", async (req, res) => {
+// Get saved promotion count for the authenticated user
+router.get("/me/count", async (req, res) => {
   try {
-    const count = await getSavedPromotionCount(req.params.userId);
+    const count = await getSavedPromotionCount(req.auth!.userId);
     res.status(200).json({ count });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -32,10 +80,10 @@ router.get("/user/:userId/count", async (req, res) => {
   }
 });
 
-// Check if promotion is saved
-router.get("/:userId/:promotionId/check", async (req, res) => {
+// Check if a promotion is saved by the authenticated user
+router.get("/:promotionId/check", async (req, res) => {
   try {
-    const saved = await isSaved(req.params.userId, req.params.promotionId);
+    const saved = await isSaved(req.auth!.userId, req.params.promotionId);
     res.status(200).json({ saved });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -43,11 +91,11 @@ router.get("/:userId/:promotionId/check", async (req, res) => {
   }
 });
 
-// Save promotion
+// Save a promotion for the authenticated user
 router.post("/", async (req, res) => {
-  const { userId, promotionId } = req.body;
+  const { promotionId } = req.body;
   try {
-    const savedPromotion = await savePromotion(userId, promotionId);
+    const savedPromotion = await savePromotion(req.auth!.userId, promotionId);
     res.status(201).json(savedPromotion);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -55,22 +103,11 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Unsave promotion
-router.delete("/:userId/:promotionId", async (req, res) => {
+// Unsave a promotion for the authenticated user
+router.delete("/:promotionId", async (req, res) => {
   try {
-    await unsavePromotion(req.params.userId, req.params.promotionId);
+    await unsavePromotion(req.auth!.userId, req.params.promotionId);
     res.status(200).json({ message: "Promotion removed from saved" });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(404).json({ message });
-  }
-});
-
-// Remove saved promotion by ID
-router.delete("/:id", async (req, res) => {
-  try {
-    await removeSavedPromotion(req.params.id);
-    res.status(200).json({ message: "Saved promotion deleted successfully" });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(404).json({ message });

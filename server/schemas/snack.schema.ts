@@ -1,6 +1,18 @@
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, Document, model } from "mongoose";
 
-const snackSchema = new Schema(
+export interface ISnack {
+  name: string;
+  description?: string;
+  price: number;
+  imageUrl?: string;
+  category?: "POPCORN" | "DRINK" | "CANDY" | "HOT_FOOD" | "OTHER";
+  quantity?: number;
+  status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+}
+
+export interface ISnackDocument extends ISnack, Document {}
+
+const snackSchema = new Schema<ISnackDocument>(
   {
     name: {
       type: String,
@@ -40,4 +52,5 @@ const snackSchema = new Schema(
   { timestamps: true }
 );
 
-export const Snack = model("Snack", snackSchema);
+export const Snack =
+  mongoose.models.Snack || model<ISnackDocument>("Snack", snackSchema);

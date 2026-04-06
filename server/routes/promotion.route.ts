@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { authenticate, authorize } from "../middlewares/auth.middleware";
+import { upload } from "../middlewares/upload.middleware";
 import {
   getAllPromotions,
   getPromotionById,
@@ -14,6 +16,8 @@ import {
 
 const router = Router();
 
+// ─── Public routes (no auth required) ────────────────────────────────────────
+
 // Get all promotions
 router.get("/", async (_req, res) => {
   try {
@@ -26,6 +30,7 @@ router.get("/", async (_req, res) => {
 });
 
 // Get active promotions only
+// NOTE: must be registered before /:id to avoid "active" being treated as an ID
 router.get("/active", async (_req, res) => {
   try {
     const promotions = await getActivePromotions();
@@ -36,7 +41,8 @@ router.get("/active", async (_req, res) => {
   }
 });
 
-// Get promotion by code
+// Look up a promotion by its code (used in checkout UI)
+// NOTE: must be registered before /:id for the same reason
 router.get("/code/:code", async (req, res) => {
   try {
     const promotion = await getPromotionByCode(req.params.code);
@@ -47,11 +53,11 @@ router.get("/code/:code", async (req, res) => {
   }
 });
 
-// Validate promotion code
-router.post("/validate/:code", async (req, res) => {
+// Validate a promotion code against an order value (used during checkout)
+router.post("/validate/:code", authenticate, async (req, res) => {
   const { orderValue } = req.body;
   try {
-    const promotion = await validatePromotionCode(req.params.code, orderValue);
+    const promotion = await validatePromotionCode(String(req.params.code), orderValue);
     res.status(200).json(promotion);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -59,11 +65,11 @@ router.post("/validate/:code", async (req, res) => {
   }
 });
 
-// Calculate discount
-router.post("/:id/calculate-discount", async (req, res) => {
+// Calculate discount for a promotion against an order value (used during checkout)
+router.post("/:id/calculate-discount", authenticate, async (req, res) => {
   const { orderValue } = req.body;
   try {
-    const discount = await calculateDiscount(req.params.id, orderValue);
+    const discount = await calculateDiscount(String(req.params.id), orderValue);
     res.status(200).json({ discount });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -71,19 +77,24 @@ router.post("/:id/calculate-discount", async (req, res) => {
   }
 });
 
-// Get promotion by ID
+// Get promotion detail by ID
 router.get("/:id", async (req, res) => {
   try {
-    const promotion = await getPromotionById(req.params.id);
+    const promotion = await getPromotionById(String(req.params.id));
+    if (!promotion) {
+      return res.status(404).json({ message: "Promotion not found" });
+    }
     res.status(200).json(promotion);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(404).json({ message });
+    res.status(500).json({ message });
   }
 });
 
-// Create promotion
-router.post("/", async (req, res) => {
+// ─── Admin routes ─────────────────────────────────────────────────────────────
+
+// Create a promotion
+router.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
     const promotion = await createPromotion(req.body);
     res.status(201).json(promotion);
@@ -93,10 +104,14 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Update promotion
-router.put("/:id", async (req, res) => {
+// Update a promotion
+router.put("/:id", authenticate, authorize("ADMIN"), upload.single("image"), async (req, res) => {
   try {
-    const promotion = await updatePromotion(req.params.id, req.body);
+    const body = { ...req.body };
+    if ((req as any).file) {
+      body.imageUrl = `http://localhost:5000/uploads/${(req as any).file.filename}`;
+    }
+    const promotion = await updatePromotion(String(req.params.id), body);
     res.status(200).json(promotion);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -104,10 +119,11 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// Increment usage count
-router.patch("/:id/increment-usage", async (req, res) => {
+// Increment usage count — called internally after a booking is confirmed
+// Guarded so external clients cannot inflate usage counts arbitrarily
+router.patch("/:id/increment-usage", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
-    const promotion = await incrementUsageCount(req.params.id);
+    const promotion = await incrementUsageCount(String(req.params.id));
     res.status(200).json(promotion);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -115,10 +131,10 @@ router.patch("/:id/increment-usage", async (req, res) => {
   }
 });
 
-// Delete promotion
-router.delete("/:id", async (req, res) => {
+// Delete a promotion
+router.delete("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
-    await deletePromotion(req.params.id);
+    await deletePromotion(String(req.params.id));
     res.status(200).json({ message: "Promotion deleted successfully" });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

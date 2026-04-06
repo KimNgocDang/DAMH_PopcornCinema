@@ -2,7 +2,8 @@ import { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "../../styles/LoginPage.css";
 import logo from "../../assets/images/logo/logo.png";
-import { login } from "../../utils/auth";
+import { loginApi } from "../../services/auth.api";
+import { saveAuth } from "../../utils/auth";
 
 type LoginForm = {
   email: string;
@@ -27,25 +28,36 @@ export default function LoginPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
     if (!form.email || !form.password) {
       setError("❌ Vui lòng nhập đầy đủ thông tin");
-      setLoading(false);
       return;
     }
 
-    try {
-      const user = await login(form.email, form.password);
+    setLoading(true);
 
-      setLoading(false);
-      if (user.role === "ADMIN") {
+    try {
+      const data = await loginApi(form.email, form.password);
+
+      saveAuth(data.token, {
+        _id: data.user._id,
+        fullName: data.user.fullName,
+        email: data.user.email,
+        phone: data.user.phone,
+        avatar: data.user.avatar,
+        role: data.user.role,
+        status: data.user.status,
+      });
+
+      if (data.user.role === "ADMIN") {
         navigate("/admin/dashboard");
       } else {
         navigate("/");
       }
     } catch (err: any) {
-      setError(err.message || "❌ Đăng nhập thất bại. Vui lòng thử lại");
+
+      setError(err.message || "❌ Sai email hoặc mật khẩu");
+    } finally {
       setLoading(false);
     }
   };
@@ -53,8 +65,6 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-container">
-
-        {/* LEFT */}
         <div className="login-left">
           <div className="login-overlay"></div>
 
@@ -70,15 +80,12 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* RIGHT */}
         <div className="login-right">
           <div className="login-card">
-
             <h2>Đăng nhập</h2>
             <p className="login-sub">Chào mừng bạn quay lại 👋</p>
 
             <form onSubmit={handleSubmit} className="login-form">
-
               <div className="input-group">
                 <label>Email</label>
                 <input
@@ -103,29 +110,18 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* 🔐 QUÊN MẬT KHẨU */}
-              <div className="login-extra">
-                <Link to="/auth/forgot-password" className="forgot-link">
-                  Quên mật khẩu?
-                </Link>
-              </div>
-
               {error && <p className="login-error">{error}</p>}
-
-              <button type="submit" className="login-btn" disabled={loading}>
+              <button className="login-btn" disabled={loading}>
                 {loading ? "Đang đăng nhập..." : "Đăng nhập"}
               </button>
 
-              {/* 🔗 REGISTER */}
               <p className="login-footer">
                 Chưa có tài khoản?{" "}
                 <Link to="/auth/register" className="register-link">
                   Đăng ký
                 </Link>
               </p>
-
             </form>
-
           </div>
         </div>
       </div>

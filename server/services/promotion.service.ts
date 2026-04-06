@@ -1,5 +1,4 @@
 import { Promotion } from "../schemas/promotion.schema";
-import { BookingCombo } from "../schemas/booking-combo.schema";
 
 type CreatePromotionInput = {
   code: string;
